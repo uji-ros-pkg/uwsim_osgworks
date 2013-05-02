@@ -255,3 +255,6 @@ configure_file(extra/osgworks.fpc.in
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/lib/flagpoll/osgworks.fpc
         DESTINATION lib/flagpoll )
 
+# Install catkin package.xml
+install(FILES package.xml DESTINATION share/uwsim_osgworks)
+
