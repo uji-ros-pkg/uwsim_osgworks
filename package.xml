@@ -4,7 +4,7 @@
   <version>2.0.2</version>
   <description>The OSG Works library adapted to UWSim. See https://code.google.com/p/osgworks</description>
 
-  <maintainer email="mprats@willowgarage.com">Mario Prats</maintainer>
+  <maintainer email="marioprats@gmail.com">Mario Prats</maintainer>
   <license>LGPL</license>
 
   <buildtool_depend>cmake</buildtool_depend>
