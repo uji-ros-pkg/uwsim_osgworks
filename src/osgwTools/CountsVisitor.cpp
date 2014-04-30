@@ -20,6 +20,7 @@
 
 #include <osgwTools/CountsVisitor.h>
 #include <osgwTools/StateSetUtils.h>
+#include <osgwTools/Version.h>
 #include <osg/LOD>
 #include <osg/PagedLOD>
 #include <osg/Switch>
@@ -36,6 +37,7 @@
 #include <osgText/Text>
 #include <iostream>
 #include <map>
+#include <numeric>
 
 
 namespace osgwTools
@@ -80,6 +82,14 @@ float CountsVisitor::getChildrenPerNode()
     const unsigned int allNodes( _nodes+_groups+_lods+_pagedLods+_switches+_sequences+_transforms+_matrixTransforms+_dofTransforms );
     if( allNodes > 0 )
         return( (float)_totalChildren / (float)allNodes );
+    else
+        return( 0.f );
+}
+float CountsVisitor::getChildrenPerGroup()
+{
+    const unsigned int allGroups( _groups + _lods + _pagedLods + _switches + _sequences + _transforms + _matrixTransforms + _dofTransforms );
+    if( allGroups > 0 )
+        return( (float)_totalChildren / (float)allGroups );
     else
         return( 0.f );
 }
@@ -166,7 +176,9 @@ CountsVisitor::reset()
     _drawUserModeNotSet = 0;
 
     _totalChildren = 0;
+#if( OSGWORKS_OSG_VERSION < 30108 )
     _slowPathGeometries = 0;
+#endif
 
     _uNodes.clear();
     _uGroups.clear();
@@ -190,6 +202,29 @@ CountsVisitor::reset()
     _uTextures.clear();
     _uPrimitiveSets.clear();
     _uDrawArrays.clear();
+
+    _childrenPerGroup.clear();
+    _drawablesPerGeode.clear();
+    _primSetsPerGeom.clear();
+    _vertsPerGeom.clear();
+
+    _maxChildren.clear();
+    _minChildrenCount = 0xffffffff;
+    _maxChildrenCount = 0;
+
+    _maxDrawable.clear();
+    _minDrawableCount = 0xffffffff;
+    _maxDrawableCount = 0;
+
+    _maxPrimSet.clear();
+    _maxPrimSetGeom = NULL;
+    _minPrimSetCount = 0xffffffff;
+    _maxPrimSetCount = 0;
+
+    _minVertices.clear();
+    _minVerticesGeom = NULL;
+    _minVerticesCount = 0xffffffff;
+    _maxVerticesCount = 0;
 }
 
 void
@@ -226,11 +261,9 @@ CountsVisitor::dump( std::ostream& ostr )
     ostr << "                Texts \t" << _texts << "\t" << _uTexts.size() << std::endl;
     ostr << "      Other Drawables \t" << _drawables << "\t" << _uDrawables.size() << std::endl;
     ostr << "      Totol Drawables \t" << _totalDrawables << std::endl;
-    ostr << "  Drawables per Geode \t" << getDrawablesPerGeode() << std::endl;
     ostr << "   Drawables per Node \t" << getDrawablesPerNode() << std::endl;
     ostr << "           DrawArrays \t" << _drawArrays << "\t" << _uDrawArrays.size() << std::endl;
     ostr << "  Total PrimitiveSets \t" << _primitiveSets << "\t" << _uPrimitiveSets.size() << std::endl;
-    ostr << "    PrimSets per Geom \t" << getPrimitiveSetsPerGeometry() << std::endl;
     if( _countUserMode )
     {
         ostr << "Drawables with user Modes:" << std::endl;
@@ -239,16 +272,59 @@ CountsVisitor::dump( std::ostream& ostr )
         ostr << "              Not set \t" << _drawUserModeNotSet << std::endl;
     }
 
+#if( OSGWORKS_OSG_VERSION < 30108 )
     if (_slowPathGeometries)
         ostr << "      Slow Path Geoms \t" << _slowPathGeometries << std::endl;
-    ostr << "    Children per Node \t" << getChildrenPerNode() << std::endl;
+#endif
 
     ostr << "       Total Vertices \t" << _vertices << std::endl;
-    ostr << "    Vertices per Geom \t" << getVerticesPerGeometry() << std::endl;
     ostr << "            Max Depth \t" << _maxDepth << std::endl;
+
+    double mean, median, stdev;
+    stats( mean, median, stdev, _childrenPerGroup );
+    ostr << std::endl;
+    ostr << "Children per Group" << std::endl;
+    ostr << "  Mean: " << mean <<
+        ",   Median: " << median <<
+        ",   Std dev: " << stdev << std::endl;
+    ostr << "  Min: " << _minChildrenCount <<
+      ",   Max: " << _maxChildrenCount << std::endl;
+    ostr << "  Group with max children: "; dumpNodePath( ostr, _maxChildren );
+
+    stats( mean, median, stdev, _drawablesPerGeode );
+    ostr << std::endl;
+    ostr << "Drawables per Geode" << std::endl;
+    ostr << "  Mean: " << mean <<
+        ",   Median: " << median <<
+        ",   Std dev: " << stdev << std::endl;
+    ostr << "  Min: " << _minDrawableCount <<
+        ",   Max: " << _maxDrawableCount << std::endl;
+    ostr << "  Geode with max drawables: "; dumpNodePath( ostr, _maxDrawable );
+
+    stats( mean, median, stdev, _primSetsPerGeom );
+    ostr << std::endl;
+    ostr << "PrimitivesSets per Geometry" << std::endl;
+    ostr << "  Mean: " << mean <<
+        ",   Median: " << median <<
+        ",   Std dev: " << stdev << std::endl;
+    ostr << "  Min: " << _minPrimSetCount <<
+        ",   Max: " << _maxPrimSetCount << std::endl;
+    ostr << "  Geometry with max PrimitiveSets: "; dumpNodePath( ostr, _maxPrimSet );
+    ostr << "    Geometry name: \"" << _maxPrimSetGeom->getName() << "\"" << std::endl;
+
+    stats( mean, median, stdev, _vertsPerGeom );
+    ostr << std::endl;
+    ostr << "Vertices per Geometry" << std::endl;
+    ostr << "  Mean: " << mean <<
+        ",   Median: " << median <<
+        ",   Std dev: " << stdev << std::endl;
+    ostr << "  Min: " << _minVerticesCount <<
+        ",   Max: " << _maxVerticesCount << std::endl;
+    ostr << "  Geometry with min Vertices: "; dumpNodePath( ostr, _minVertices );
+    ostr << "    Geometry name: \"" << _minVerticesGeom->getName() << "\"" << std::endl;
 }
 
-void CountsVisitor::apply( osg::Drawable* draw )
+void CountsVisitor::apply( const osg::Geode& node, osg::Drawable* draw )
 {
     apply( draw->getStateSet() );
 
@@ -281,20 +357,27 @@ void CountsVisitor::apply( osg::Drawable* draw )
         osg::ref_ptr<osg::Object> rp = (osg::Object*)geom;
         _uGeometries.insert( rp );
 
+#if( OSGWORKS_OSG_VERSION < 30108 )
+        // OSG removed slow paths in 3.1.8 tag.
         if (!geom->areFastPathsUsed())
             _slowPathGeometries++;
+#endif
 
+        numPrimSetCheck( node, geom );
+        unsigned int localVertices( 0 );
         if( geom->getNumPrimitiveSets() > 0 )
         {
             unsigned int idx;
             for( idx=0; idx < geom->getNumPrimitiveSets(); idx++ )
             {
                 osg::PrimitiveSet* ps = geom->getPrimitiveSet( idx );
-                _vertices += ps->getNumIndices();
+                localVertices += ps->getNumIndices();
             }
+            _vertices += localVertices;
         }
         else
             _nullGeometries++;
+        numVerticesCheck( node, geom, localVertices );
         osg::ref_ptr<osg::Object> rpv = (osg::Object*)( geom->getVertexArray() );
         _uVertices.insert( rpv );
 
@@ -430,6 +513,56 @@ CountsVisitor::apply( osg::Node& node )
     popStateSet();
 }
 
+void CountsVisitor::numChildrenCheck( const osg::Group& node )
+{
+    const unsigned int nc( node.getNumChildren() );
+    _childrenPerGroup.push_back( (double)nc );
+    if( nc > _maxChildrenCount )
+    {
+        _maxChildrenCount = nc;
+        _maxChildren = getNodePath();
+    }
+    if( nc < _minChildrenCount )
+        _minChildrenCount = nc;
+}
+void CountsVisitor::numDrawableCheck( const osg::Geode& node )
+{
+    const unsigned int nd( node.getNumDrawables() );
+    _drawablesPerGeode.push_back( (double)nd );
+    if( nd > _maxDrawableCount )
+    {
+        _maxDrawableCount = nd;
+        _maxDrawable = getNodePath();
+    }
+    if( nd < _minDrawableCount )
+        _minDrawableCount = nd;
+}
+void CountsVisitor::numPrimSetCheck( const osg::Geode& node, osg::Geometry* geom )
+{
+    const unsigned int nps( geom->getNumPrimitiveSets() );
+    _primSetsPerGeom.push_back( nps );
+    if( nps > _maxPrimSetCount )
+    {
+        _maxPrimSetCount = nps;
+        _maxPrimSet = getNodePath();
+        _maxPrimSetGeom = geom;
+    }
+    if( nps < _minPrimSetCount )
+        _minPrimSetCount = nps;
+}
+void CountsVisitor::numVerticesCheck( const osg::Geode& node, osg::Geometry* geom, const unsigned int numVerts )
+{
+    _vertsPerGeom.push_back( (double)numVerts );
+    if( numVerts < _minVerticesCount )
+    {
+        _minVerticesCount = numVerts;
+        _minVertices = getNodePath();
+        _minVerticesGeom = geom;
+    }
+    if( numVerts > _maxVerticesCount )
+        _maxVerticesCount = numVerts;
+}
+
 void
 CountsVisitor::apply( osg::Group& node )
 {
@@ -439,6 +572,7 @@ CountsVisitor::apply( osg::Group& node )
     osg::ref_ptr<osg::Object> rp = (osg::Object*)&node;
     _uGroups.insert( rp );
     _totalChildren += node.getNumChildren();
+    numChildrenCheck( node );
     apply( node.getStateSet() );
 
     if (++_depth > _maxDepth)
@@ -483,6 +617,7 @@ CountsVisitor::apply( osg::PagedLOD& node )
     osg::ref_ptr<osg::Object> rp = (osg::Object*)&node;
     _uPagedLods.insert( rp );
     _totalChildren += node.getNumChildren();
+    numChildrenCheck( node );
 
     if (++_depth > _maxDepth)
         _maxDepth = _depth;
@@ -501,6 +636,7 @@ CountsVisitor::apply( osg::Switch& node )
     osg::ref_ptr<osg::Object> rp = (osg::Object*)&node;
     _uSwitches.insert( rp );
     _totalChildren += node.getNumChildren();
+    numChildrenCheck( node );
     apply( node.getStateSet() );
 
     if (++_depth > _maxDepth)
@@ -520,6 +656,7 @@ CountsVisitor::apply( osg::Sequence& node )
     osg::ref_ptr<osg::Object> rp = (osg::Object*)&node;
     _uSequences.insert( rp );
     _totalChildren += node.getNumChildren();
+    numChildrenCheck( node );
     apply( node.getStateSet() );
 
     if (++_depth > _maxDepth)
@@ -548,6 +685,7 @@ CountsVisitor::apply( osg::Transform& node )
         _uTransforms.insert( rp );
     }
     _totalChildren += node.getNumChildren();
+    numChildrenCheck( node );
     apply( node.getStateSet() );
 
     if (++_depth > _maxDepth)
@@ -567,6 +705,7 @@ CountsVisitor::apply( osg::MatrixTransform& node )
     osg::ref_ptr<osg::Object> rp = (osg::Object*)&node;
     _uMatrixTransforms.insert( rp );
     _totalChildren += node.getNumChildren();
+    numChildrenCheck( node );
     apply( node.getStateSet() );
 
     if (++_depth > _maxDepth)
@@ -585,13 +724,14 @@ CountsVisitor::apply( osg::Geode& node )
     _geodes++;
     osg::ref_ptr<osg::Object> rp = (osg::Object*)&node;
     _uGeodes.insert( rp );
+    numDrawableCheck( node );
     apply( node.getStateSet() );
 
     unsigned int idx;
     for (idx=0; idx<node.getNumDrawables(); idx++)
     {
         osg::Drawable* draw = node.getDrawable( idx );
-        apply( draw );
+        apply( node, draw );
     }
 
     if (++_depth > _maxDepth)
@@ -602,6 +742,17 @@ CountsVisitor::apply( osg::Geode& node )
     popStateSet();
 }
 
+
+void CountsVisitor::dumpNodePath( std::ostream& ostr, const osg::NodePath& np )
+{
+    for( unsigned int idx=0; idx < np.size(); ++idx )
+    {
+        ostr << "\"" << np[ idx ]->getName() << "\"";
+        if( idx < np.size()-1 )
+            ostr << ", ";
+    }
+    ostr << std::endl;
+}
 
 bool CountsVisitor::isSet( GLenum stateItem, osg::StateSet* ss )
 {
@@ -634,6 +785,24 @@ bool CountsVisitor::isEnabled( GLenum stateItem, osg::StateSet* ss )
     else
         // If it's not enabled, then it's off or not set.
         return( false );
+}
+
+void CountsVisitor::stats( double& mean, double& median, double& stdev, DoubleVec& v )
+{
+    if( v.size() == 0 )
+    {
+        mean = median = stdev = 0.;
+        return;
+    }
+
+    double sum = std::accumulate( v.begin(), v.end(), 0.0 );
+    mean = sum / v.size();
+
+    const unsigned int idx( ((v.size() & 0x1) == 1) ? v.size() / 2 + 1 : v.size() / 2 );
+    median = v[ idx ];
+
+    double sqSum = std::inner_product( v.begin(), v.end(), v.begin(), 0.0 );
+    stdev = sqrt( sqSum / v.size() - mean * mean );
 }
 
 

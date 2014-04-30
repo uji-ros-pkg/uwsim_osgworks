@@ -16,10 +16,8 @@ set( LIB_PUBLIC_HEADERS
     ${HEADER_PATH}/CameraConfigObject.h
     ${HEADER_PATH}/Capabilities.h
     ${HEADER_PATH}/CollapseLOD.h
-    ${HEADER_PATH}/CountStateSets.h
     ${HEADER_PATH}/CountsVisitor.h
     ${HEADER_PATH}/DataLoader.h
-    ${HEADER_PATH}/DecimatorOp.h
     ${HEADER_PATH}/DecimationTestModel.h
     ${HEADER_PATH}/FBOUtils.h
     ${HEADER_PATH}/FindNamedNode.h
@@ -28,7 +26,6 @@ set( LIB_PUBLIC_HEADERS
     ${HEADER_PATH}/GeometryOperation.h
     ${HEADER_PATH}/InsertRemove.h
     ${HEADER_PATH}/LODCreationNodeVisitor.h
-    ${HEADER_PATH}/MeshOptimizers.h
     ${HEADER_PATH}/MultiCameraProjectionMatrix.h
     ${HEADER_PATH}/NodePathUtils.h
     ${HEADER_PATH}/NodeUtils.h
@@ -45,28 +42,23 @@ set( LIB_PUBLIC_HEADERS
     ${HEADER_PATH}/ScreenCapture.h
     ${HEADER_PATH}/SerializerSupport.h
     ${HEADER_PATH}/Shapes.h
-    ${HEADER_PATH}/ShortEdgeOp.h
     ${HEADER_PATH}/SimplifierOp.h
     ${HEADER_PATH}/StateSetUtils.h
     ${HEADER_PATH}/StateTrackingNodeVisitor.h
-    ${HEADER_PATH}/TangentSpaceGeneratorDouble.h
-    ${HEADER_PATH}/TangentSpaceOp.h
     ${HEADER_PATH}/Transform.h
     ${HEADER_PATH}/TransformUtils.h
     ${HEADER_PATH}/TransparencyUtils.h
+    ${HEADER_PATH}/Trianglizer.h
     ${HEADER_PATH}/Uniqifier.h
     ${HEADER_PATH}/Version.h
 )
-
 set( _osgwToolsSourceFiles
     AbsoluteModelTransform.cpp
     CallbackSupport.cpp
     CameraConfigObject.cpp
     Capabilities.cpp
     CollapseLOD.cpp
-    CountStateSets.cpp
     CountsVisitor.cpp
-    DecimatorOp.cpp
     FBOUtils.cpp
     FindNamedNode.cpp
     ForceFlattenTransforms.cpp
@@ -74,7 +66,6 @@ set( _osgwToolsSourceFiles
     GeometryOperation.cpp
     InsertRemove.cpp
     LODCreationNodeVisitor.cpp
-    MeshOptimizers.cpp
     MultiCameraProjectionMatrix.cpp
     NodePathUtils.cpp
     NodeUtils.cpp
@@ -91,22 +82,41 @@ set( _osgwToolsSourceFiles
     RemoveProgram.cpp
     ScreenCapture.cpp
     Shapes.cpp
-    ShortEdgeOp.cpp
     SimplifierOp.cpp
     StateSetUtils.cpp
     StateTrackingNodeVisitor.cpp
-    TangentSpaceGeneratorDouble.cpp
-    TangentSpaceOp.cpp
     Transform.cpp
     TransformUtils.cpp
     TransparencyUtils.cpp
+    Trianglizer.cpp
     Uniqifier.cpp
     Version.cpp
 )
 
+unset( _osgwToolsHeaderFilesPre319 )
+unset( _osgwToolsSourceFilesPre319 )
+if( ${OPENSCENEGRAPH_VERSION} VERSION_LESS "3.1.9" )
+    set( _osgwToolsHeaderFilesPre319
+        ${HEADER_PATH}/DecimatorOp.h
+        ${HEADER_PATH}/MeshOptimizers.h
+        ${HEADER_PATH}/ShortEdgeOp.h
+        ${HEADER_PATH}/TangentSpaceGeneratorDouble.h
+        ${HEADER_PATH}/TangentSpaceOp.h
+    )
+    set( _osgwToolsSourceFilesPre319
+        DecimatorOp.cpp
+        MeshOptimizers.cpp
+        ShortEdgeOp.cpp
+        TangentSpaceGeneratorDouble.cpp
+        TangentSpaceOp.cpp
+    )
+endif()
+
 add_library( ${LIB_NAME}
     ${LIB_PUBLIC_HEADERS}
+    ${_osgwToolsHeaderFilesPre319}
     ${_osgwToolsSourceFiles}
+    ${_osgwToolsSourceFilesPre319}
 )
 if( BUILD_SHARED_LIBS )
     target_link_libraries( ${LIB_NAME}

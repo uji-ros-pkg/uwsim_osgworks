@@ -10,50 +10,53 @@
 # Created by Cedric Pinson.
 #
 
+set( _dxArch )
+if( DIRECTINPUT_ARCH_x64 )
+    set( _dxArch "x64" )
+else()
+    set( _dxArch "x86" )
+endif()
+
+
 SET( DIRECTINPUT_FOUND FALSE )
 
 IF( WIN32 )
-    FIND_PATH( DIRECTINPUT_ROOT_DIR Include/dinput.h
+    FIND_PATH( DIRECTINPUT_ROOT_DIR Include/D3D10.h
                PATHS
                $ENV{PATH}
                $ENV{PROGRAMFILES}
     )
-
+    
     FIND_PATH( DIRECTINPUT_INCLUDE_DIR dinput.h
                PATHS
                ${DIRECTINPUT_ROOT_DIR}/Include
     )
-
-    FIND_LIBRARY( DIRECTINPUT_LIBRARY dinput8.lib
+    
+    FIND_LIBRARY( DIRECTINPUT_LIBRARY dinput7.lib dinput8.lib
                   PATHS
-                  ${DIRECTINPUT_ROOT_DIR}/lib/x86
-                  ${DIRECTINPUT_ROOT_DIR}/lib
+                  ${DIRECTINPUT_ROOT_DIR}/lib/${_dxArch}
     )
-
+    
     FIND_LIBRARY( DIRECTINPUT_GUID_LIBRARY dxguid.lib
                   PATHS
-                  ${DIRECTINPUT_ROOT_DIR}/lib/x86
-                  ${DIRECTINPUT_ROOT_DIR}/lib
+                  ${DIRECTINPUT_ROOT_DIR}/lib/${_dxArch}
     )
-
-#    FIND_LIBRARY( DIRECTINPUT_ERR_LIBRARY dxerr.lib
-#                  PATHS
-#                  ${DIRECTINPUT_ROOT_DIR}/lib/x86
-#                  ${DIRECTINPUT_ROOT_DIR}/lib
-#    )
-
-    IF ( DIRECTINPUT_INCLUDE_DIR AND DIRECTINPUT_LIBRARY AND DIRECTINPUT_GUID_LIBRARY )
+    
+    FIND_LIBRARY( DIRECTINPUT_ERR_LIBRARY dxerr.lib
+                  PATHS
+                  ${DIRECTINPUT_ROOT_DIR}/lib/${_dxArch}
+    )
+    
+    SET( DIRECTINPUT_LIBRARIES
+         ${DIRECTINPUT_LIBRARY}
+         ${DIRECTINPUT_GUID_LIBRARY}
+         ${DIRECTINPUT_ERR_LIBRARY}
+    )
+    
+    IF ( DIRECTINPUT_INCLUDE_DIR AND DIRECTINPUT_LIBRARIES )
         SET( DIRECTINPUT_FOUND TRUE )
-        SET( DIRECTINPUT_LIBRARIES
-           ${DIRECTINPUT_LIBRARY}
-           ${DIRECTINPUT_GUID_LIBRARY}
-#           ${DIRECTINPUT_ERR_LIBRARY}
-           )
-    ENDIF ()
+    ENDIF ( DIRECTINPUT_INCLUDE_DIR AND DIRECTINPUT_LIBRARIES )
 ENDIF( WIN32 )
 
 MARK_AS_ADVANCED( DIRECTINPUT_FOUND )
-MARK_AS_ADVANCED( DIRECTINPUT_INCLUDE_DIR )
-MARK_AS_ADVANCED( DIRECTINPUT_LIBRARY )
-MARK_AS_ADVANCED( DIRECTINPUT_GUID_LIBRARY )
-#MARK_AS_ADVANCED( DIRECTINPUT_ERR_LIBRARY )
+
