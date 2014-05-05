@@ -1,7 +1,7 @@
 # # # # # #  project setup  # # # # # #
 
 CMAKE_MINIMUM_REQUIRED( VERSION 2.8.7 )
-PROJECT( uwsim_osgWorks )
+PROJECT( uwsim_osgworks )
 
 # Note: These values are used by include/osgwTools/Version.in
 # to generate the Version.h file.
