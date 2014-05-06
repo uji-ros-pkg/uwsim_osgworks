@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package>
   <name>uwsim_osgworks</name>
-  <version>3.0.2</version>
+  <version>3.0.3</version>
   <description>The OSG Works library adapted to UWSim. See https://code.google.com/p/osgworks</description>
 
   <maintainer email="marioprats@gmail.com">Mario Prats</maintainer>
