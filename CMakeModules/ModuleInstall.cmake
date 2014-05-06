@@ -18,6 +18,7 @@ SET(HEADERS_GROUP "Header Files")
 SOURCE_GROUP(
     ${HEADERS_GROUP}
     FILES ${LIB_PUBLIC_HEADERS}
+    FILES ${_osgwToolsHeaderFilesPre319}
 )
 
 INSTALL(
@@ -30,7 +31,7 @@ INSTALL(
 
 # FIXME: Do not run for OS X framework
 INSTALL(
-    FILES        ${LIB_PUBLIC_HEADERS}
+    FILES        ${LIB_PUBLIC_HEADERS} ${_osgwToolsHeaderFilesPre319}
     #EXPORT osgworks-targets
     DESTINATION ${INSTALL_INCDIR}/${LIB_NAME}
     COMPONENT libosgworks-dev
